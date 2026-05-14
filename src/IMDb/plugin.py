@@ -55,8 +55,6 @@ config.plugins.imdb.showepisodeinfo = ConfigYesNo(default=False)
 
 
 def getPage(url, params=None, data=None, headers=None):
-	headers = headers or {}
-	headers["user-agent"] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 	return deferToThread(requests.post if data else requests.get, url, params=params, data=data, headers=headers, timeout=30.05)
 
 
