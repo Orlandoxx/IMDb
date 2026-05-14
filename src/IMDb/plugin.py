@@ -54,10 +54,10 @@ config.plugins.imdb.showepisoderesults = ConfigYesNo(default=False)
 config.plugins.imdb.showepisodeinfo = ConfigYesNo(default=False)
 
 
-def getPage(url, params=None, data=None, headers=None, cookies=None):
+def getPage(url, params=None, data=None, headers=None):
 	headers = headers or {}
 	headers["user-agent"] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-	return deferToThread(requests.post if data else requests.get, url, params=params, data=data, headers=headers, cookies=cookies, timeout=30.05)
+	return deferToThread(requests.post if data else requests.get, url, params=params, data=data, headers=headers, timeout=30.05)
 
 
 def savePage(response, filename):
@@ -68,8 +68,8 @@ def savePage(response, filename):
 		return e
 
 
-def downloadPage(url, filename, params=None, headers=None, cookies=None):
-	return getPage(url, params, headers, cookies).addCallback(savePage, filename)
+def downloadPage(url, filename, params=None, headers=None):
+	return getPage(url, params, headers).addCallback(savePage, filename)
 
 
 def postGraphQL(query, operation_name=None, variables=None, headers=None):
@@ -282,10 +282,11 @@ class IMDB(Screen, HelpableScreen):
 		# 4 = reviews page
 		self.Page = 0
 
-		self.cookie = {
-			"lc-main": language.getLanguage(),
-			"session-id": "000-0000000-0000000",
-		}
+		self.lang = language.getLanguage().replace("_", "-")
+		try:
+			self.country = self.lang.split("-")[1]
+		except Exception:
+			self.country = None
 
 		self["actionsOk"] = HelpableActionMap(self, "OkCancelActions",
 		{
@@ -395,12 +396,10 @@ class IMDB(Screen, HelpableScreen):
 		headers = {
 			"content-type": "application/json",
 		}
-		language_code = self.cookie.get("lc-main") or "en-US"
-		parts = language_code.replace("_", "-").split("-")
-		if parts:
-			headers["X-Imdb-User-Language"] = parts[0].lower()
-		if len(parts) > 1:
-			headers["X-Imdb-User-Country"] = parts[1].upper()
+		if self.lang:
+			headers["X-Imdb-User-Language"] = self.lang
+			if self.country:
+				headers["X-Imdb-User-Country"] = self.country
 		return headers
 
 	def searchQueryGraphQL(self, search_term):
@@ -742,7 +741,7 @@ query TitleReviewsRefine {
 		self.tmdTitleId = titleId
 		tmd = self.imdbGraphQLTitle(titleId)
 		tmd.addBoth(self.gotTMD)
-		download = getPage(fetchurl, cookies=self.cookie)
+		download = getPage(fetchurl)
 		download.addCallback(self.IMDBquery2).addErrback(self.http_failed)
 
 	def gotReviews(self, response):
