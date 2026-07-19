@@ -47,6 +47,7 @@ config.plugins.imdb.ignore_tags = ConfigText(visible_width=50, fixed_size=False)
 config.plugins.imdb.showlongmenuinfo = ConfigYesNo(default=False)
 config.plugins.imdb.showepisoderesults = ConfigYesNo(default=False)
 config.plugins.imdb.showepisodeinfo = ConfigYesNo(default=False)
+config.plugins.imdb.translate_texts = ConfigYesNo(default=False)
 
 
 def getPage(url, params=None, data=None, headers=None):
@@ -131,6 +132,34 @@ def get(json, path, default=""):
 		except Exception:
 			pass
 	return json
+
+# High‑quality translation using Google Translate (no API key required)
+def imdb_translate(text, lang):
+	if not text or lang == "en":
+		return text
+
+	try:
+		params = {
+			"client": "gtx",
+			"sl": "en",
+			"tl": lang,
+			"dt": "t",
+			"q": text,
+		}
+		r = requests.get(
+			"https://translate.googleapis.com/translate_a/single",
+			params=params,
+			timeout=10
+		)
+		if r.ok:
+			# Google returns nested lists, extract the translated text
+			data = r.json()
+			translated = "".join([part[0] for part in data[0]])
+			return translated
+	except Exception:
+		pass
+
+	return text
 
 
 class IMDB(Screen, HelpableScreen):
@@ -344,92 +373,92 @@ class IMDB(Screen, HelpableScreen):
 		return """
 query Search {
   mainSearch(
-    first: 25
-    options: {
-      searchTerm: %s
-      type: TITLE
-      includeAdult: true
-      isExactMatch: false
-      titleSearchOptions: {
-        type: %s
-      }
-    }
+	first: 25
+	options: {
+	  searchTerm: %s
+	  type: TITLE
+	  includeAdult: true
+	  isExactMatch: false
+	  titleSearchOptions: {
+		type: %s
+	  }
+	}
   ) {
-    edges {
-      node {
-        entity {
-          ... on Title {
-            id
-            titleText {
-              text
-            }
-            originalTitleText {
-              text
-            }
-            titleType {
-              text
-            }
-            releaseYear {
-              year
-              endYear
-            }
-            primaryImage {
-              url
-              width
-              height
-            }
-            series {
-              episodeNumber {
-                episodeNumber
-                seasonNumber
-              }
-              series {
-                id
-                titleText {
-                  text
-                }
-                releaseYear {
-                  year
-                  endYear
-                }
-                plot {
-                  plotText {
-                    plainText
-                  }
-                }
-                countriesOfOrigin {
-                  countries(limit: 1) {
-                    id
-                  }
-                }
-              }
-            }
-            plot {
-              plotText {
-                plainText
-              }
-            }
-            runtime {
-              displayableProperty {
-                value {
-                  plainText
-                }
-              }
-            }
-            genres {
-              genres {
-                text
-              }
-            }
-            countriesOfOrigin {
-              countries(limit: 1) {
-                id
-              }
-            }
-          }
-        }
-      }
-    }
+	edges {
+	  node {
+		entity {
+		  ... on Title {
+			id
+			titleText {
+			  text
+			}
+			originalTitleText {
+			  text
+			}
+			titleType {
+			  text
+			}
+			releaseYear {
+			  year
+			  endYear
+			}
+			primaryImage {
+			  url
+			  width
+			  height
+			}
+			series {
+			  episodeNumber {
+				episodeNumber
+				seasonNumber
+			  }
+			  series {
+				id
+				titleText {
+				  text
+				}
+				releaseYear {
+				  year
+				  endYear
+				}
+				plot {
+				  plotText {
+					plainText
+				  }
+				}
+				countriesOfOrigin {
+				  countries(limit: 1) {
+					id
+				  }
+				}
+			  }
+			}
+			plot {
+			  plotText {
+				plainText
+			  }
+			}
+			runtime {
+			  displayableProperty {
+				value {
+				  plainText
+				}
+			  }
+			}
+			genres {
+			  genres {
+				text
+			  }
+			}
+			countriesOfOrigin {
+			  countries(limit: 1) {
+				id
+			  }
+			}
+		  }
+		}
+	  }
+	}
   }
 }
 """ % (search_term, types)
@@ -439,363 +468,363 @@ query Search {
 		return """
 query TitleStoryline {
   title(id: %s) {
-    id
-    titleText {
-      text
-    }
-    originalTitleText {
-      text
-    }
-    titleType {
-      text
-    }
-    releaseYear {
-      year
-      endYear
-    }
-    releaseDate {
-      displayableProperty {
-        value {
-          plainText
-        }
-      }
-      day
-      month
-      year
-      country {
-        text
-      }
-    }
-    episodes {
-      episodes(first: 0) {
-        total
-      }
-      displayableSeasons(first: 0) {
-        total
-      }
-    }
-    ratingsSummary {
-      aggregateRating
-      voteCount
-    }
-    primaryImage {
-      url
-      width
-      height
-    }
-    plot {
-      plotText {
-        plainText
-      }
-    }
-    genres {
-      genres {
-        text
-      }
-    }
-    countriesOfOrigin {
-      countries {
-        id
-        text
-      }
-    }
-    spokenLanguages {
-      spokenLanguages {
-        id
-        text
-      }
-    }
-    runtime {
-      displayableProperty {
-        value {
-          plainText
-        }
-      }
-    }
-    certificate {
-      rating
-      ratingReason
-      ratingsBody {
-        id
-      }
-    }
-    wins: awardNominations(first: 0, filter: { wins: WINS_ONLY }) {
-      total
-    }
-    nominationsExcludeWins: awardNominations(first: 0, filter: { wins: EXCLUDE_WINS }) {
-      total
-    }
-    prestigiousAwardSummary {
-      nominations
-      wins
-      award {
-        text
-      }
-    }
-    castV2: principalCreditsV2(
-      filter: { mode: "TOP_CAST" }
-      useEntitlement: false
-    ) {
-      grouping {
-        groupingId
-        text
-      }
-      totalCredits
-      credits(limit: 18) {
-        name {
-          id
-          nameText {
-            text
-          }
-          primaryImage {
-            url
-            width
-            height
-          }
-        }
-        creditedRoles(first: 1) {
-          edges {
-            node {
-              category {
-                categoryId
-                text
-              }
-              attributes {
-                text
-              }
-              characters(first: 3) {
-                edges {
-                  node {
-                    name
-                  }
-                }
-              }
-            }
-          }
-        }
-        episodeCredits(first: 0) {
-          total
-          yearRange {
-            year
-            endYear
-          }
-        }
-      }
-    }
-    crewV2: principalCreditsV2(
-      filter: { mode: "DEFAULT", includeAppearances: false }
-      useEntitlement: false
-    ) {
-      totalCredits
-      grouping {
-        groupingId
-        text
-      }
-      credits(limit: 3) {
-        name {
-          id
-          nameText {
-            text
-          }
-        }
-      }
-    }
-    summaries: plots(first: 1, filter: {type: SUMMARY}) {
-      edges {
-        node {
-          author
-          plotText {
-            plainText
-          }
-        }
-      }
-    }
-    outlines: plots(first: 1, filter: {type: OUTLINE}) {
-      edges {
-        node {
-          plotText {
-            plainText
-          }
-        }
-      }
-    }
-    synopses: plots(first: 1, filter: {type: SYNOPSIS}) {
-      edges {
-        node {
-          plotText {
-            plainText
-          }
-        }
-      }
-    }
-    storylineKeywords: keywords(first: 5) {
-      edges {
-        node {
-          text
-        }
-      }
-      total
-    }
-    taglines(first: 1) {
-      edges {
-        node {
-          text
-        }
-      }
-    }
-    technicalSpecifications {
-      soundMixes {
-        items {
-          text
-        }
-      }
-      colorations {
-        items {
-          text
-        }
-      }
-      aspectRatios {
-        items {
-          aspectRatio
-        }
-      }
-    }
-    trivia(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
-      edges {
-        node {
-          text {
-            plainText
-          }
-        }
-      }
-    }
-    goofs(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
-      edges {
-        node {
-          text {
-            plainText
-          }
-        }
-      }
-    }
-    quotes(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
-      edges {
-        node {
-          displayableArticle {
-            body {
-              plainText
-            }
-          }
-        }
-      }
-    }
-    connections(first: 1) {
-      edges {
-        node {
-          associatedTitle {
-            id
-            releaseYear {
-              year
-            }
-            titleText {
-              text
-            }
-            originalTitleText {
-              text
-            }
-            series {
-              series {
-                titleText {
-                  text
-                }
-                originalTitleText {
-                  text
-                }
-              }
-            }
-          }
-          category {
-            text
-          }
-        }
-      }
-    }
-    filmingLocations(first: 1) {
-      edges {
-        node {
-          text
-        }
-      }
-    }
-    production: companyCredits(
-      first: 3
-      filter: { categories: ["production"] }
-    ) {
-      edges {
-        node {
-          company {
-            companyText {
-              text
-            }
-          }
-        }
-      }
-    }
-    featuredReviews(first: 5) {
-      edges {
-        node {
-          authorRating
-          summary {
-            originalText
-          }
-          author {
-            username {
-              text
-            }
-          }
-          text {
-            originalText {
-              plainText
-            }
-          }
-          submissionDate
-        }
-      }
-    }
-    reviews(first: 0) {
-      total
-    }
-    primaryVideos {
-      edges {
-        node {
-          contentType {
-            displayName {
-              value
-            }
-          }
-          description {
-            value
-          }
-          name {
-            value
-          }
-          runtime {
-            value
-          }
-          playbackURLs {
-            url
-          }
-          timedTextTracks {
-            displayName {
-              value
-              language
-            }
-            language
-            url
-          }
-        }
-      }
-    }
+	id
+	titleText {
+	  text
+	}
+	originalTitleText {
+	  text
+	}
+	titleType {
+	  text
+	}
+	releaseYear {
+	  year
+	  endYear
+	}
+	releaseDate {
+	  displayableProperty {
+		value {
+		  plainText
+		}
+	  }
+	  day
+	  month
+	  year
+	  country {
+		text
+	  }
+	}
+	episodes {
+	  episodes(first: 0) {
+		total
+	  }
+	  displayableSeasons(first: 0) {
+		total
+	  }
+	}
+	ratingsSummary {
+	  aggregateRating
+	  voteCount
+	}
+	primaryImage {
+	  url
+	  width
+	  height
+	}
+	plot {
+	  plotText {
+		plainText
+	  }
+	}
+	genres {
+	  genres {
+		text
+	  }
+	}
+	countriesOfOrigin {
+	  countries {
+		id
+		text
+	  }
+	}
+	spokenLanguages {
+	  spokenLanguages {
+		id
+		text
+	  }
+	}
+	runtime {
+	  displayableProperty {
+		value {
+		  plainText
+		}
+	  }
+	}
+	certificate {
+	  rating
+	  ratingReason
+	  ratingsBody {
+		id
+	  }
+	}
+	wins: awardNominations(first: 0, filter: { wins: WINS_ONLY }) {
+	  total
+	}
+	nominationsExcludeWins: awardNominations(first: 0, filter: { wins: EXCLUDE_WINS }) {
+	  total
+	}
+	prestigiousAwardSummary {
+	  nominations
+	  wins
+	  award {
+		text
+	  }
+	}
+	castV2: principalCreditsV2(
+	  filter: { mode: "TOP_CAST" }
+	  useEntitlement: false
+	) {
+	  grouping {
+		groupingId
+		text
+	  }
+	  totalCredits
+	  credits(limit: 18) {
+		name {
+		  id
+		  nameText {
+			text
+		  }
+		  primaryImage {
+			url
+			width
+			height
+		  }
+		}
+		creditedRoles(first: 1) {
+		  edges {
+			node {
+			  category {
+				categoryId
+				text
+			  }
+			  attributes {
+				text
+			  }
+			  characters(first: 3) {
+				edges {
+				  node {
+					name
+				  }
+				}
+			  }
+			}
+		  }
+		}
+		episodeCredits(first: 0) {
+		  total
+		  yearRange {
+			year
+			endYear
+		  }
+		}
+	  }
+	}
+	crewV2: principalCreditsV2(
+	  filter: { mode: "DEFAULT", includeAppearances: false }
+	  useEntitlement: false
+	) {
+	  totalCredits
+	  grouping {
+		groupingId
+		text
+	  }
+	  credits(limit: 3) {
+		name {
+		  id
+		  nameText {
+			text
+		  }
+		}
+	  }
+	}
+	summaries: plots(first: 1, filter: {type: SUMMARY}) {
+	  edges {
+		node {
+		  author
+		  plotText {
+			plainText
+		  }
+		}
+	  }
+	}
+	outlines: plots(first: 1, filter: {type: OUTLINE}) {
+	  edges {
+		node {
+		  plotText {
+			plainText
+		  }
+		}
+	  }
+	}
+	synopses: plots(first: 1, filter: {type: SYNOPSIS}) {
+	  edges {
+		node {
+		  plotText {
+			plainText
+		  }
+		}
+	  }
+	}
+	storylineKeywords: keywords(first: 5) {
+	  edges {
+		node {
+		  text
+		}
+	  }
+	  total
+	}
+	taglines(first: 1) {
+	  edges {
+		node {
+		  text
+		}
+	  }
+	}
+	technicalSpecifications {
+	  soundMixes {
+		items {
+		  text
+		}
+	  }
+	  colorations {
+		items {
+		  text
+		}
+	  }
+	  aspectRatios {
+		items {
+		  aspectRatio
+		}
+	  }
+	}
+	trivia(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
+	  edges {
+		node {
+		  text {
+			plainText
+		  }
+		}
+	  }
+	}
+	goofs(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
+	  edges {
+		node {
+		  text {
+			plainText
+		  }
+		}
+	  }
+	}
+	quotes(first: 1, filter: { spoilers: EXCLUDE_SPOILERS }) {
+	  edges {
+		node {
+		  displayableArticle {
+			body {
+			  plainText
+			}
+		  }
+		}
+	  }
+	}
+	connections(first: 1) {
+	  edges {
+		node {
+		  associatedTitle {
+			id
+			releaseYear {
+			  year
+			}
+			titleText {
+			  text
+			}
+			originalTitleText {
+			  text
+			}
+			series {
+			  series {
+				titleText {
+				  text
+				}
+				originalTitleText {
+				  text
+				}
+			  }
+			}
+		  }
+		  category {
+			text
+		  }
+		}
+	  }
+	}
+	filmingLocations(first: 1) {
+	  edges {
+		node {
+		  text
+		}
+	  }
+	}
+	production: companyCredits(
+	  first: 3
+	  filter: { categories: ["production"] }
+	) {
+	  edges {
+		node {
+		  company {
+			companyText {
+			  text
+			}
+		  }
+		}
+	  }
+	}
+	featuredReviews(first: 5) {
+	  edges {
+		node {
+		  authorRating
+		  summary {
+			originalText
+		  }
+		  author {
+			username {
+			  text
+			}
+		  }
+		  text {
+			originalText {
+			  plainText
+			}
+		  }
+		  submissionDate
+		}
+	  }
+	}
+	reviews(first: 0) {
+	  total
+	}
+	primaryVideos {
+	  edges {
+		node {
+		  contentType {
+			displayName {
+			  value
+			}
+		  }
+		  description {
+			value
+		  }
+		  name {
+			value
+		  }
+		  runtime {
+			value
+		  }
+		  playbackURLs {
+			url
+		  }
+		  timedTextTracks {
+			displayName {
+			  value
+			  language
+			}
+			language
+			url
+		  }
+		}
+	  }
+	}
   }
 }
 """ % title_id
@@ -805,32 +834,32 @@ query TitleStoryline {
 		return """
 query TitleReviewsRefine {
   title(id: %s) {
-    reviews(first: 25) {
-      edges {
-        node {
-          authorRating
-          summary {
-            originalText
-          }
-          author {
-            username {
-              text
-            }
-          }
-          submissionDate
-          spoiler
-          text {
-            originalText {
-              plainText
-            }
-          }
-          helpfulness {
-            upVotes
-            downVotes
-          }
-        }
-      }
-    }
+	reviews(first: 25) {
+	  edges {
+		node {
+		  authorRating
+		  summary {
+			originalText
+		  }
+		  author {
+			username {
+			  text
+			}
+		  }
+		  submissionDate
+		  spoiler
+		  text {
+			originalText {
+			  plainText
+			}
+		  }
+		  helpfulness {
+			upVotes
+			downVotes
+		  }
+		}
+	  }
+	}
   }
 }
 """ % title_id
@@ -1071,6 +1100,7 @@ query TitleReviewsRefine {
 			if summary_author:
 				summary += " \u2014" + summary_author
 		synopsis = get(title, ("synopses", "edges", "node", "plotText", "plainText"))
+
 		keywords = " | ".join(get(k, ("node", "text")) for k in get(title, ("storylineKeywords", "edges"), []))
 		tagline = get(title, ("taglines", "edges", "node", "text"))
 		cert = get(title, ("certificate", "rating"))
@@ -1089,6 +1119,20 @@ query TitleReviewsRefine {
 		trivia = get(title, ("trivia", "edges", "node", "text", "plainText"))
 		goofs = get(title, ("goofs", "edges", "node", "text", "plainText"))
 		quotes = get(title, ("quotes", "edges", "node", "displayableArticle", "body", "plainText"))
+
+		# Translation if selected
+		lang = language.getLanguage().split("_")[0]
+		def safe_translate(text, lang):
+			if text:
+				return imdb_translate(text, lang)
+			return text
+		if lang != "en" and config.plugins.imdb.translate_texts.value:
+			outline = safe_translate(outline, lang)
+			summary = safe_translate(summary, lang)
+			synopsis = safe_translate(synopsis, lang)
+			trivia = safe_translate(trivia, lang)
+			goofs = safe_translate(goofs, lang)
+			quotes = safe_translate(quotes, lang)
 
 		connections = ""
 		node = get(title, ("connections", "edges", "node"))
@@ -1149,10 +1193,20 @@ query TitleReviewsRefine {
 					arating = review["authorRating"] and str(review["authorRating"]) + "/10"
 					author = get(review, ("author", "username", "text"))
 					date = get(review, "submissionDate")
+
+					# Original texts
+					summary_text = get(review, ("summary", "originalText"))
+					body_text = get(review, ("text", "originalText", "plainText"))
+
+					# Translate both using Google
+					if lang != "en" and config.plugins.imdb.translate_texts.value:
+						summary_text = safe_translate(summary_text, lang)
+						body_text = safe_translate(body_text, lang)
+
 					Extralist.append(" | ".join(x for x in (arating, author, date) if x))
-					Extralist.append(get(review, ("summary", "originalText")))
+					Extralist.append(summary_text)
 					Extralist.append("")
-					Extralist.append(get(review, ("text", "originalText", "plainText")))
+					Extralist.append(body_text)
 					Extralist.append("")
 					Extralist.append("-" * 72)
 					Extralist.append("")
@@ -1376,8 +1430,8 @@ query TitleReviewsRefine {
 			"%s\n"  # cast
 			"\n"
 			"%s\n"  # extra
-			"%s"    # newlines & synopsis, if present
-			"%s"    # newlines & reviews, if present
+			"%s"	# newlines & synopsis, if present
+			"%s"	# newlines & reviews, if present
 		) % (
 			self.eventName,
 			self["ratinglabel"].getText(),
@@ -1589,8 +1643,25 @@ query TitleReviewsRefine {
 
 	def searchPlot(self):
 		cur = self["menu"].getCurrent()
-		if cur:
-			self["statusbar"].setText(cur[2])
+		if not cur:
+			return
+
+		plot_text = cur[2]  # original text
+
+		# UI language
+		lang = language.getLanguage().split("_")[0]
+
+		# Same safe translate function as IMDBparse()
+		def safe_translate(text, lang):
+			if text:
+				return imdb_translate(text, lang)
+			return text
+
+		# Translate only if user selected "Yes"
+		if lang != "en" and config.plugins.imdb.translate_texts.value:
+			plot_text = safe_translate(plot_text, lang)
+
+		self["statusbar"].setText(plot_text)
 
 	def http_failed(self, failure):
 		text = _("IMDb Download failed")
